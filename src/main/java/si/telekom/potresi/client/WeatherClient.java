@@ -24,7 +24,7 @@ public class WeatherClient {
     @Value("${weather.api.key}")
     private String apiKey;
 
-    private static final String WEATHER_API = "https://api.openweathermap.org/data/2.5/weathe";
+    private static final String WEATHER_API = "https://api.openweathermap.org/data/2.5/weather";
 
     @Retry(name = "weatherApi")
     @CircuitBreaker(name = "weatherApi", fallbackMethod = "weatherFallback")
