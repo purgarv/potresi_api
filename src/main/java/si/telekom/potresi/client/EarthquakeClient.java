@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
-import si.telekom.potresi.dto.EarthquakeRecordWithWeatherDTO;
 import si.telekom.potresi.dto.GeoLocationDTO;
 
 @Component
@@ -56,7 +55,7 @@ public class EarthquakeClient {
 
     @Retry(name = "earthquakeApi")
     @CircuitBreaker(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
-    public EarthquakeRecordWithWeatherDTO getMostRecentEarthquake() {
+    public EarthquakeRecordDTO getMostRecentEarthquake() {
         String url = BASE_FEED_URL + "all_hour.geojson";
 
         String response = this.restTemplate.getForObject(url, String.class);
@@ -78,7 +77,7 @@ public class EarthquakeClient {
             }
         }
 
-        return mapToEarthquakeRecordWithWeather(mostRecent);
+        return mapToEarthquakeRecord(mostRecent);
     }
 
     private EarthquakeRecordDTO mapToEarthquakeRecord(JSONObject feature) {
@@ -97,21 +96,6 @@ public class EarthquakeClient {
         return record;
     }
 
-    private EarthquakeRecordWithWeatherDTO mapToEarthquakeRecordWithWeather(JSONObject feature) {
-        JSONObject properties = feature.getJSONObject("properties");
-        JSONObject geometry = feature.getJSONObject("geometry");
-        JSONArray coordinates = geometry.getJSONArray("coordinates");
-
-        double longitude = coordinates.getDouble(0);
-        double latitude = coordinates.getDouble(1);
-        double depth = coordinates.getDouble(2);
-
-        String place = properties.optString("place", "Unknown location");
-
-        EarthquakeRecordWithWeatherDTO record = new EarthquakeRecordWithWeatherDTO(place, new GeoLocationDTO(latitude, longitude), depth, null);
-        log.debug("Mapped EarthquakeRecordWithWeatherDTO: {}", record);
-        return record;
-    }
 
     private String getFeedNameForDays(int days) {
         if (days <= 1) return "all_day.geojson";
@@ -124,7 +108,7 @@ public class EarthquakeClient {
         return null;
     }
 
-    public EarthquakeRecordWithWeatherDTO fallbackMostRecent(Throwable t) {
+    public EarthquakeRecordDTO fallbackMostRecent(Throwable t) {
         System.err.println("Fallback for getMostRecentEarthquake: " + t.getMessage());
         return null;
     }

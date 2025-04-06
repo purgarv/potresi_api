@@ -1,10 +1,14 @@
 package si.telekom.potresi.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public class EarthquakeRecordDTO {
     private String nearestPlace;
     private GeoLocationDTO location;
     private double depth;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private WeatherInfoDTO weather;
 
 
     public EarthquakeRecordDTO() {}
@@ -13,6 +17,13 @@ public class EarthquakeRecordDTO {
         this.nearestPlace = nearestPlace;
         this.location = location;
         this.depth = depth;
+        this.weather = null;
+    }
+    public EarthquakeRecordDTO(String nearestPlace, GeoLocationDTO location, double depth, WeatherInfoDTO weather) {
+        this.nearestPlace = nearestPlace;
+        this.location = location;
+        this.depth = depth;
+        this.weather = weather;
     }
 
     public String getNearestPlace() {
@@ -37,6 +48,14 @@ public class EarthquakeRecordDTO {
 
     public void setDepth(double depth) {
         this.depth = depth;
+    }
+
+    public WeatherInfoDTO getWeather() {
+        return weather;
+    }
+
+    public void setWeather(WeatherInfoDTO weather) {
+        this.weather = weather;
     }
 
     @Override

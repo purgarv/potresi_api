@@ -76,7 +76,7 @@ class EarthquakeControllerTest {
 
     @Test
     void getMostRecentEarthquakeWithWeather_shouldReturnOk() throws Exception {
-        EarthquakeRecordWithWeatherDTO record = new EarthquakeRecordWithWeatherDTO(
+        EarthquakeRecordDTO record = new EarthquakeRecordDTO(
                 "Celje",
                 new GeoLocationDTO(46.24, 15.27),
                 8.5,

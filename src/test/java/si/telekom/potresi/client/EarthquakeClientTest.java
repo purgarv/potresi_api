@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestTemplate;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
-import si.telekom.potresi.dto.EarthquakeRecordWithWeatherDTO;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -95,7 +94,7 @@ class EarthquakeClientTest {
 
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(mockJson);
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeClient.getMostRecentEarthquake();
+        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
         assertNotNull(result);
         assertEquals("Most Recent", result.getNearestPlace());
@@ -114,7 +113,7 @@ class EarthquakeClientTest {
 
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(emptyJson);
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeClient.getMostRecentEarthquake();
+        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
         assertNull(result);
     }
@@ -123,7 +122,7 @@ class EarthquakeClientTest {
     void getMostRecentEarthquake_shouldReturnNullOnInvalidJson() {
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("nonsense");
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeClient.getMostRecentEarthquake();
+        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
         assertNull(result); // fallback should handle
     }

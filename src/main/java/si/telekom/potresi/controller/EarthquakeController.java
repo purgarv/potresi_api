@@ -3,7 +3,6 @@ package si.telekom.potresi.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
-import si.telekom.potresi.dto.EarthquakeRecordWithWeatherDTO;
 import si.telekom.potresi.service.EarthquakeService;
 
 import java.util.Map;
@@ -36,7 +35,7 @@ public class EarthquakeController {
 
     @GetMapping("/zadnji")
     public ResponseEntity<?> getMostRecentEarthquakeWithWeather() {
-        EarthquakeRecordWithWeatherDTO record = earthquakeService.getLastEarthquakeWithWeather();
+        EarthquakeRecordDTO record = earthquakeService.getLastEarthquakeWithWeather();
         return record != null
                 ? ResponseEntity.ok(record)
                 : ResponseEntity.status(503).body(Map.of("error", "Could not fetch the most recent earthquake data."));

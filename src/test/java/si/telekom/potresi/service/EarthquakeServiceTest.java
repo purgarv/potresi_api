@@ -73,25 +73,25 @@ class EarthquakeServiceTest {
     @Test
     void getLastEarthquakeWithWeather_shouldReturnValidData() {
         GeoLocationDTO location = new GeoLocationDTO(46.05, 14.5);
-        EarthquakeRecordWithWeatherDTO earthquake = new EarthquakeRecordWithWeatherDTO("Ljubljana", location, 9.0, null);
+        EarthquakeRecordDTO earthquake = new EarthquakeRecordDTO("Ljubljana", location, 9.0, null);
         WeatherInfoDTO weather = new WeatherInfoDTO("Sunny", 24.0, 50.0);
 
         when(earthquakeClient.getMostRecentEarthquake()).thenReturn(earthquake);
         when(weatherClient.getCurrentWeather(location.getLatitude(), location.getLongitude())).thenReturn(weather);
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeService.getLastEarthquakeWithWeather();
+        EarthquakeRecordDTO result = earthquakeService.getLastEarthquakeWithWeather();
 
         assertNotNull(result);
         assertEquals("Ljubljana", result.getNearestPlace());
-        assertEquals("Sunny", result.getWeatherInfo().getDescription());
-        assertEquals(24.0, result.getWeatherInfo().getTemperature());
+        assertEquals("Sunny", result.getWeather().getDescription());
+        assertEquals(24.0, result.getWeather().getTemperature());
     }
 
     @Test
     void getLastEarthquakeWithWeather_shouldReturnNullIfNoEarthquake() {
         when(earthquakeClient.getMostRecentEarthquake()).thenReturn(null);
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeService.getLastEarthquakeWithWeather();
+        EarthquakeRecordDTO result = earthquakeService.getLastEarthquakeWithWeather();
 
         assertNull(result);
     }
@@ -99,16 +99,16 @@ class EarthquakeServiceTest {
     @Test
     void getLastEarthquakeWithWeather_shouldHandleWeatherFetchException() {
         GeoLocationDTO location = new GeoLocationDTO(46.1, 14.6);
-        EarthquakeRecordWithWeatherDTO earthquake = new EarthquakeRecordWithWeatherDTO("Nova Gorica", location, 7.8, null);
+        EarthquakeRecordDTO earthquake = new EarthquakeRecordDTO("Nova Gorica", location, 7.8, null);
 
         when(earthquakeClient.getMostRecentEarthquake()).thenReturn(earthquake);
         when(weatherClient.getCurrentWeather(location.getLatitude(), location.getLongitude()))
                 .thenThrow(new RuntimeException("Weather API error"));
 
-        EarthquakeRecordWithWeatherDTO result = earthquakeService.getLastEarthquakeWithWeather();
+        EarthquakeRecordDTO result = earthquakeService.getLastEarthquakeWithWeather();
 
         assertNotNull(result);
         assertEquals("Nova Gorica", result.getNearestPlace());
-        assertNull(result.getWeatherInfo()); // should fail gracefully
+        assertNull(result.getWeather()); // should fail gracefully
     }
 }

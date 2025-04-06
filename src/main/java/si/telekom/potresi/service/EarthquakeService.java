@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import si.telekom.potresi.client.EarthquakeClient;
 import si.telekom.potresi.client.WeatherClient;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
-import si.telekom.potresi.dto.EarthquakeRecordWithWeatherDTO;
 import si.telekom.potresi.dto.WeatherInfoDTO;
 
 import java.util.function.Supplier;
@@ -22,7 +21,7 @@ public class EarthquakeService {
 
     private EarthquakeRecordDTO cachedWeeklyWorst;
     private EarthquakeRecordDTO cachedMonthlyWorst;
-    private EarthquakeRecordWithWeatherDTO cachedLastEarthquake;
+    private EarthquakeRecordDTO cachedLastEarthquake;
 
     public EarthquakeService(EarthquakeClient earthquakeClient, WeatherClient weatherClient) {
         this.earthquakeClient = earthquakeClient;
@@ -51,9 +50,9 @@ public class EarthquakeService {
         return cachedMonthlyWorst;
     }
 
-    public EarthquakeRecordWithWeatherDTO getLastEarthquakeWithWeather() {
+    public EarthquakeRecordDTO getLastEarthquakeWithWeather() {
         log.info("Getting most recent earthquake with weather.");
-        EarthquakeRecordWithWeatherDTO quake = safeFetch(earthquakeClient::getMostRecentEarthquake);
+        EarthquakeRecordDTO quake = safeFetch(earthquakeClient::getMostRecentEarthquake);
 
         if (quake == null) {
             log.warn("Using cached last earthquake.");
@@ -64,7 +63,7 @@ public class EarthquakeService {
             double lat = quake.getLocation().getLatitude();
             double lon = quake.getLocation().getLongitude();
             WeatherInfoDTO weather = weatherClient.getCurrentWeather(lat, lon);
-            quake.setWeatherInfo(weather);
+            quake.setWeather(weather);
         } catch (Exception ex) {
             log.error("Failed to fetch weather info: {}", ex.getMessage());
         }
@@ -92,13 +91,13 @@ public class EarthquakeService {
         EarthquakeRecordDTO monthly = safeFetch(() -> earthquakeClient.getWorstEarthquakeInPeriod(30));
         if (monthly != null) cachedMonthlyWorst = monthly;
 
-        EarthquakeRecordWithWeatherDTO last = safeFetch(earthquakeClient::getMostRecentEarthquake);
+        EarthquakeRecordDTO last = safeFetch(earthquakeClient::getMostRecentEarthquake);
         if (last != null) {
             try {
                 WeatherInfoDTO weather = weatherClient.getCurrentWeather(
                         last.getLocation().getLatitude(),
                         last.getLocation().getLongitude());
-                last.setWeatherInfo(weather);
+                last.setWeather(weather);
             } catch (Exception e) {
                 log.error("Weather fetch failed in scheduled task: {}", e.getMessage());
             }

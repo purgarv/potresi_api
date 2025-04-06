@@ -24,7 +24,7 @@ public class WeatherClient {
     @Value("${weather.api.key}")
     private String apiKey;
 
-    private static final String WEATHER_API = "https://api.openweathermap.org/data/2.5/weather";
+    private static final String WEATHER_API = "https://api.openweathermap.org/data/2.5/weathe";
 
     @Retry(name = "weatherApi")
     @CircuitBreaker(name = "weatherApi", fallbackMethod = "weatherFallback")
@@ -55,9 +55,7 @@ public class WeatherClient {
 
     public WeatherInfoDTO weatherFallback(double latitude, double longitude, Throwable t) {
         System.err.println("Weather fallback triggered: " + t.getMessage());
-        WeatherInfoDTO fallback = new WeatherInfoDTO("Weather data unavailable", 0.0, 0.0);
-        fallback.setWeatherAvailable(false);
-        return fallback;
+        return new WeatherInfoDTO("Weather data unavailable", 0.0, 0.0, false);
     }
 
 }

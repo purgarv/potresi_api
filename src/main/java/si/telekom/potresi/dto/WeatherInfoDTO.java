@@ -15,6 +15,13 @@ public class WeatherInfoDTO {
         this.humidity = humidity;
     }
 
+    public WeatherInfoDTO(String description, double temperature, double humidity, boolean weatherAvailable) {
+        this.description = description;
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.weatherAvailable = weatherAvailable;
+    }
+
     public String getDescription() {
         return description;
     }
