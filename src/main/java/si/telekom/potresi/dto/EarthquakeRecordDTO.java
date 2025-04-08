@@ -2,10 +2,14 @@ package si.telekom.potresi.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.time.Instant;
+
 public class EarthquakeRecordDTO {
     private String nearestPlace;
     private GeoLocationDTO location;
     private double depth;
+
+    private Instant validAt;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private WeatherInfoDTO weather;
@@ -19,11 +23,24 @@ public class EarthquakeRecordDTO {
         this.depth = depth;
         this.weather = null;
     }
+    public EarthquakeRecordDTO(String nearestPlace, GeoLocationDTO location, double depth, Instant validAt) {
+        this.nearestPlace = nearestPlace;
+        this.location = location;
+        this.depth = depth;
+        this.validAt = validAt;
+    }
     public EarthquakeRecordDTO(String nearestPlace, GeoLocationDTO location, double depth, WeatherInfoDTO weather) {
         this.nearestPlace = nearestPlace;
         this.location = location;
         this.depth = depth;
         this.weather = weather;
+    }
+    public EarthquakeRecordDTO(String nearestPlace, GeoLocationDTO location, double depth, WeatherInfoDTO weather, Instant validAt) {
+        this.nearestPlace = nearestPlace;
+        this.location = location;
+        this.depth = depth;
+        this.weather = weather;
+        this.validAt = validAt;
     }
 
     public String getNearestPlace() {
@@ -65,5 +82,13 @@ public class EarthquakeRecordDTO {
                 ", location=" + location +
                 ", depth=" + depth +
                 '}';
+    }
+
+    public Instant getValidAt() {
+        return validAt;
+    }
+
+    public void setValidAt(Instant validAt) {
+        this.validAt = validAt;
     }
 }

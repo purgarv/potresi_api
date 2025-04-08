@@ -2,6 +2,7 @@ package si.telekom.potresi.client;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.*;
 import org.springframework.web.client.RestTemplate;
 import si.telekom.potresi.dto.WeatherInfoDTO;
 
@@ -10,71 +11,80 @@ import static org.mockito.Mockito.*;
 
 class WeatherClientTest {
 
+    @Mock
     private RestTemplate restTemplate;
+
+    @InjectMocks
     private WeatherClient weatherClient;
 
     @BeforeEach
     void setUp() {
-        restTemplate = mock(RestTemplate.class);
-        weatherClient = new WeatherClient(restTemplate);
-
-        // manually set API key
-        try {
-            var field = WeatherClient.class.getDeclaredField("apiKey");
-            field.setAccessible(true);
-            field.set(weatherClient, "dummy-api-key");
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to inject API key into WeatherClient", e);
-        }
+        MockitoAnnotations.openMocks(this);
     }
 
-    // ========== getCurrentWeather() ==========
+    // -----------------------------
+    // getCurrentWeather
+    // -----------------------------
 
     @Test
-    void getCurrentWeather_shouldReturnParsedWeather() {
-        String mockJson = """
+    void testGetCurrentWeather_ParsesValidJson() {
+        String json = """
         {
-            "weather": [
-                { "description": "clear sky" }
-            ],
-            "main": {
-                "temp": 22.5,
-                "humidity": 60.0
-            }
+          "weather": [ { "description": "Cloudy" } ],
+          "main": { "temp": 19.5, "humidity": 70 }
         }
         """;
 
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(mockJson);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
-        WeatherInfoDTO result = weatherClient.getCurrentWeather(46.05, 14.5);
+        WeatherInfoDTO result = weatherClient.getCurrentWeather(46.0, 14.0);
 
         assertNotNull(result);
-        assertEquals("clear sky", result.getDescription());
-        assertEquals(22.5, result.getTemperature());
-        assertEquals(60.0, result.getHumidity());
+        assertEquals("Cloudy", result.getDescription());
+        assertEquals(19.5, result.getTemperature());
+        assertEquals(70.0, result.getHumidity());
+        assertTrue(result.isWeatherAvailable());
     }
 
     @Test
-    void getCurrentWeather_shouldReturnFallbackOnInvalidJson() {
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("invalid json");
+    void testGetCurrentWeather_MissingFields_Throws() {
+        String json = """
+        {
+          "weather": [],
+          "main": {}
+        }
+        """;
 
-        WeatherInfoDTO result = weatherClient.getCurrentWeather(46.05, 14.5);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
-        assertNotNull(result);
-        assertEquals("unavailable", result.getDescription());
-        assertEquals(0.0, result.getTemperature());
-        assertEquals(0.0, result.getHumidity());
+        assertThrows(Exception.class, () -> {
+            weatherClient.getCurrentWeather(50.0, 16.0);
+        });
     }
 
     @Test
-    void getCurrentWeather_shouldReturnFallbackOnException() {
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenThrow(new RuntimeException("Connection error"));
+    void testGetCurrentWeather_InvalidJson_Throws() {
+        String json = "INVALID_JSON";
 
-        WeatherInfoDTO result = weatherClient.getCurrentWeather(46.05, 14.5);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
-        assertNotNull(result);
-        assertEquals("unavailable", result.getDescription());
-        assertEquals(0.0, result.getTemperature());
-        assertEquals(0.0, result.getHumidity());
+        assertThrows(Exception.class, () -> {
+            weatherClient.getCurrentWeather(0.0, 0.0);
+        });
+    }
+
+    // -----------------------------
+    // weatherFallback
+    // -----------------------------
+
+    @Test
+    void testWeatherFallback_ReturnsUnavailableDTO() {
+        WeatherInfoDTO fallback = weatherClient.weatherFallback(10.0, 20.0, new RuntimeException("API down"));
+
+        assertNotNull(fallback);
+        assertEquals("Weather data unavailable", fallback.getDescription());
+        assertEquals(0.0, fallback.getTemperature());
+        assertEquals(0.0, fallback.getHumidity());
+        assertFalse(fallback.isWeatherAvailable());
     }
 }

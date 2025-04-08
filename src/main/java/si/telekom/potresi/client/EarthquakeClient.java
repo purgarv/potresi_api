@@ -10,6 +10,10 @@ import org.springframework.web.client.RestTemplate;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
 import si.telekom.potresi.dto.GeoLocationDTO;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.time.Instant;
+
 @Component
 public class EarthquakeClient {
 
@@ -24,7 +28,7 @@ public class EarthquakeClient {
 
     @Retry(name = "earthquakeApi")
     @CircuitBreaker(name = "earthquakeApi", fallbackMethod = "fallbackWorst")
-    public EarthquakeRecordDTO getWorstEarthquakeInPeriod(int days) {
+    public List<EarthquakeRecordDTO> getWorstEarthquakeInPeriod(int days) {
         String feed = getFeedNameForDays(days);
         String url = BASE_FEED_URL + feed;
 
@@ -32,10 +36,10 @@ public class EarthquakeClient {
         JSONObject json = new JSONObject(response);
         JSONArray features = json.getJSONArray("features");
 
-        if (features.isEmpty()) return null;
+        if (features.length() == 0) return List.of();
 
-        JSONObject strongest = null;
         double maxMag = Double.MIN_VALUE;
+        List<JSONObject> strongest = new ArrayList<>();
 
         for (int i = 0; i < features.length(); i++) {
             JSONObject feature = features.getJSONObject(i);
@@ -46,38 +50,54 @@ public class EarthquakeClient {
             double mag = properties.getDouble("mag");
             if (mag > maxMag) {
                 maxMag = mag;
-                strongest = feature;
+                strongest.clear();
+                strongest.add(feature);
+            } else if (mag == maxMag) {
+                strongest.add(feature);
             }
         }
 
-        return strongest != null ? mapToEarthquakeRecord(strongest) : null;
+        return strongest.stream().map(this::mapToEarthquakeRecord).toList();
     }
 
     @Retry(name = "earthquakeApi")
     @CircuitBreaker(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
     public EarthquakeRecordDTO getMostRecentEarthquake() {
-        String url = BASE_FEED_URL + "all_hour.geojson";
+        String[] feeds = {
+                "all_hour.geojson",
+                "all_day.geojson",
+                "all_week.geojson",
+                "all_month.geojson"
+        };
 
-        String response = this.restTemplate.getForObject(url, String.class);
-        JSONObject json = new JSONObject(response);
-        JSONArray features = json.getJSONArray("features");
+        for (String feed : feeds) { // if there is no data in the hourly feed, try the next one until data is found
+            String url = BASE_FEED_URL + feed;
 
-        if (features.isEmpty()) return null;
+            String response = this.restTemplate.getForObject(url, String.class);
+            JSONObject json = new JSONObject(response);
+            JSONArray features = json.getJSONArray("features");
 
-        JSONObject mostRecent = features.getJSONObject(0);
-        long latestTime = mostRecent.getJSONObject("properties").optLong("time", 0);
+            if (features.length() == 0) continue;
 
-        for (int i = 1; i < features.length(); i++) {
-            JSONObject current = features.getJSONObject(i);
-            long currentTime = current.getJSONObject("properties").optLong("time", 0);
+            JSONObject mostRecent = features.getJSONObject(0);
+            long latestTime = mostRecent.getJSONObject("properties").optLong("time", 0);
 
-            if (currentTime > latestTime) {
-                mostRecent = current;
-                latestTime = currentTime;
+            for (int i = 1; i < features.length(); i++) {
+                JSONObject current = features.getJSONObject(i);
+                long currentTime = current.getJSONObject("properties").optLong("time", 0);
+                if (currentTime > latestTime) {
+                    mostRecent = current;
+                    latestTime = currentTime;
+                }
             }
+
+            EarthquakeRecordDTO record = mapToEarthquakeRecord(mostRecent);
+            record.setValidAt(Instant.now());
+            return record;
         }
 
-        return mapToEarthquakeRecord(mostRecent);
+        log.warn("No recent earthquakes found in any feed.");
+        return null;
     }
 
     private EarthquakeRecordDTO mapToEarthquakeRecord(JSONObject feature) {
@@ -91,7 +111,7 @@ public class EarthquakeClient {
 
         String place = properties.optString("place", "Unknown location");
 
-        EarthquakeRecordDTO record = new EarthquakeRecordDTO(place, new GeoLocationDTO(latitude, longitude), depth);
+        EarthquakeRecordDTO record = new EarthquakeRecordDTO(place, new GeoLocationDTO(latitude, longitude), depth, Instant.now());
         log.debug("Mapped EarthquakeRecordDTO: {}", record);
         return record;
     }
@@ -103,9 +123,9 @@ public class EarthquakeClient {
         return "all_month.geojson";
     }
 
-    public EarthquakeRecordDTO fallbackWorst(int days, Throwable t) {
+    public List<EarthquakeRecordDTO> fallbackWorst(int days, Throwable t) {
         System.err.println("Fallback for getWorstEarthquakeInPeriod: " + t.getMessage());
-        return null;
+        return List.of();
     }
 
     public EarthquakeRecordDTO fallbackMostRecent(Throwable t) {

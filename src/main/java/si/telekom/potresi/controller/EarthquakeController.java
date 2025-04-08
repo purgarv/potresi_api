@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
 import si.telekom.potresi.service.EarthquakeService;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -19,17 +20,17 @@ public class EarthquakeController {
 
     @GetMapping("/rekordi/tedenski")
     public ResponseEntity<?> getWorstWeeklyEarthquake() {
-        EarthquakeRecordDTO record = earthquakeService.getWorstEarthquakeLastWeek();
-        return record != null
-                ? ResponseEntity.ok(record)
+        List<EarthquakeRecordDTO> records = earthquakeService.getWorstEarthquakeLastWeek();
+        return records != null && !records.isEmpty()
+                ? ResponseEntity.ok(records)
                 : ResponseEntity.status(503).body(Map.of("error", "Could not fetch the worst earthquake data for the last week."));
     }
 
     @GetMapping("/rekordi/mesecni")
     public ResponseEntity<?> getWorstMonthlyEarthquake() {
-        EarthquakeRecordDTO record = earthquakeService.getWorstEarthquakeLastMonth();
-        return record != null
-                ? ResponseEntity.ok(record)
+        List<EarthquakeRecordDTO> records = earthquakeService.getWorstEarthquakeLastMonth();
+        return records != null && !records.isEmpty()
+                ? ResponseEntity.ok(records)
                 : ResponseEntity.status(503).body(Map.of("error", "Could not fetch the worst earthquake data for the last month."));
     }
 

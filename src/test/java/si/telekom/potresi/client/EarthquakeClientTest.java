@@ -2,114 +2,199 @@ package si.telekom.potresi.client;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.*;
 import org.springframework.web.client.RestTemplate;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class EarthquakeClientTest {
 
+    @Mock
     private RestTemplate restTemplate;
+
+    @InjectMocks
     private EarthquakeClient earthquakeClient;
 
     @BeforeEach
     void setUp() {
-        restTemplate = mock(RestTemplate.class);
-        earthquakeClient = new EarthquakeClient(restTemplate);
+        MockitoAnnotations.openMocks(this);
     }
 
-    // ========== getWorstEarthquakeInPeriod() ==========
+    // -----------------------------
+    // getWorstEarthquakeInPeriod
+    // -----------------------------
 
     @Test
-    void getWorstEarthquakeInPeriod_shouldReturnStrongestQuake() {
-        String mockJson = """
+    void testGetWorstEarthquakeInPeriod_SingleStrongest() {
+        String json = """
         {
-            "features": [
-                {
-                    "properties": { "mag": 3.5, "place": "Place A" },
-                    "geometry": { "coordinates": [14.5, 46.1, 10.0] }
-                },
-                {
-                    "properties": { "mag": 4.7, "place": "Place B" },
-                    "geometry": { "coordinates": [14.6, 46.2, 8.0] }
-                }
-            ]
-        }
-        """;
+          "features": [
+            {
+              "properties": { "mag": 4.5, "place": "A" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            },
+            {
+              "properties": { "mag": 3.0, "place": "B" },
+              "geometry": { "coordinates": [15, 25, 10] }
+            }
+          ]
+        }""";
 
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(mockJson);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
+        List<EarthquakeRecordDTO> result = earthquakeClient.getWorstEarthquakeInPeriod(7);
 
-        EarthquakeRecordDTO result = earthquakeClient.getWorstEarthquakeInPeriod(7);
-
-        assertNotNull(result);
-        assertEquals("Place B", result.getNearestPlace());
-        assertEquals(14.6, result.getLocation().getLongitude());
-        assertEquals(46.2, result.getLocation().getLatitude());
-        assertEquals(8.0, result.getDepth());
+        assertEquals(1, result.size());
+        assertEquals("A", result.getFirst().getNearestPlace());
     }
 
     @Test
-    void getWorstEarthquakeInPeriod_shouldReturnNullOnEmptyFeed() {
-        String emptyJson = """
+    void testGetWorstEarthquakeInPeriod_MultipleTies() {
+        String json = """
         {
-            "features": []
-        }
-        """;
+          "features": [
+            {
+              "properties": { "mag": 5.0, "place": "X" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            },
+            {
+              "properties": { "mag": 5.0, "place": "Y" },
+              "geometry": { "coordinates": [15, 25, 10] }
+            }
+          ]
+        }""";
 
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(emptyJson);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
+        List<EarthquakeRecordDTO> result = earthquakeClient.getWorstEarthquakeInPeriod(7);
 
-        EarthquakeRecordDTO result = earthquakeClient.getWorstEarthquakeInPeriod(7);
-
-        assertNull(result);
+        assertEquals(2, result.size());
+        assertEquals("X", result.get(0).getNearestPlace());
+        assertEquals("Y", result.get(1).getNearestPlace());
     }
 
     @Test
-    void getWorstEarthquakeInPeriod_shouldReturnNullOnInvalidResponse() {
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("invalid json");
-
-        EarthquakeRecordDTO result = earthquakeClient.getWorstEarthquakeInPeriod(7);
-
-        assertNull(result); // fallback will be triggered
-    }
-
-    // ========== getMostRecentEarthquake() ==========
-
-    @Test
-    void getMostRecentEarthquake_shouldReturnLatestQuake() {
-        String mockJson = """
+    void testGetWorstEarthquakeInPeriod_MissingMagField() {
+        String json = """
         {
-            "features": [
-                {
-                    "properties": { "place": "Earlier Quake", "time": 1000 },
-                    "geometry": { "coordinates": [14.5, 46.0, 10.0] }
-                },
-                {
-                    "properties": { "place": "Most Recent", "time": 2000 },
-                    "geometry": { "coordinates": [14.6, 46.1, 5.0] }
-                }
-            ]
-        }
-        """;
+          "features": [
+            {
+              "properties": { "place": "NoMag" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            }
+          ]
+        }""";
 
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(mockJson);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
+        List<EarthquakeRecordDTO> result = earthquakeClient.getWorstEarthquakeInPeriod(7);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testGetWorstEarthquakeInPeriod_NullMag() {
+        String json = """
+        {
+          "features": [
+            {
+              "properties": { "mag": null, "place": "NullMag" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            }
+          ]
+        }""";
+
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
+        List<EarthquakeRecordDTO> result = earthquakeClient.getWorstEarthquakeInPeriod(7);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testGetWorstEarthquakeInPeriod_EmptyFeed() {
+        String json = """
+        {
+          "features": []
+        }""";
+
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
+        List<EarthquakeRecordDTO> result = earthquakeClient.getWorstEarthquakeInPeriod(7);
+
+        assertTrue(result.isEmpty());
+    }
+
+    // -----------------------------
+    // getMostRecentEarthquake
+    // -----------------------------
+
+    @Test
+    void testGetMostRecentEarthquake_FindsLatest() {
+        String json = """
+        {
+          "features": [
+            {
+              "properties": { "time": 1000, "place": "Old" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            },
+            {
+              "properties": { "time": 3000, "place": "New" },
+              "geometry": { "coordinates": [30, 40, 15] }
+            }
+          ]
+        }""";
+
+        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
 
         EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
         assertNotNull(result);
-        assertEquals("Most Recent", result.getNearestPlace());
-        assertEquals(14.6, result.getLocation().getLongitude());
-        assertEquals(46.1, result.getLocation().getLatitude());
-        assertEquals(5.0, result.getDepth());
+        assertEquals("New", result.getNearestPlace());
     }
 
     @Test
-    void getMostRecentEarthquake_shouldReturnNullOnEmptyFeed() {
-        String emptyJson = """
+    void testGetMostRecentEarthquake_OnlyOneRecord() {
+        String json = """
         {
-            "features": []
-        }
-        """;
+          "features": [
+            {
+              "properties": { "time": 5000, "place": "Solo" },
+              "geometry": { "coordinates": [10, 10, 10] }
+            }
+          ]
+        }""";
+
+        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
+
+        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
+
+        assertNotNull(result);
+        assertEquals("Solo", result.getNearestPlace());
+    }
+
+    @Test
+    void testGetMostRecentEarthquake_MissingTime() {
+        String json = """
+        {
+          "features": [
+            {
+              "properties": { "place": "MissingTime" },
+              "geometry": { "coordinates": [10, 20, 5] }
+            }
+          ]
+        }""";
+
+        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
+
+        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
+
+        assertNotNull(result);
+        assertEquals("MissingTime", result.getNearestPlace());
+    }
+
+    @Test
+    void testGetMostRecentEarthquake_AllFeedsEmpty() {
+        String emptyJson = "{ \"features\": [] }";
 
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(emptyJson);
 
@@ -118,12 +203,20 @@ class EarthquakeClientTest {
         assertNull(result);
     }
 
+    // -----------------------------
+    // Fallbacks
+    // -----------------------------
+
     @Test
-    void getMostRecentEarthquake_shouldReturnNullOnInvalidJson() {
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("nonsense");
+    void testFallbackWorst_ReturnsEmptyList() {
+        List<EarthquakeRecordDTO> fallback = earthquakeClient.fallbackWorst(7, new RuntimeException("Fail"));
+        assertNotNull(fallback);
+        assertTrue(fallback.isEmpty());
+    }
 
-        EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
-
-        assertNull(result); // fallback should handle
+    @Test
+    void testFallbackMostRecent_ReturnsNull() {
+        EarthquakeRecordDTO fallback = earthquakeClient.fallbackMostRecent(new RuntimeException("Fail"));
+        assertNull(fallback);
     }
 }
