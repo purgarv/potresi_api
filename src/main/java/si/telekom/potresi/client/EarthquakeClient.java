@@ -26,8 +26,8 @@ public class EarthquakeClient {
 
     private static final String BASE_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/";
 
-    @Retry(name = "earthquakeApi")
-    @CircuitBreaker(name = "earthquakeApi", fallbackMethod = "fallbackWorst")
+    @CircuitBreaker(name = "earthquakeApi")
+    @Retry(name = "earthquakeApi", fallbackMethod = "fallbackWorst")
     public List<EarthquakeRecordDTO> getWorstEarthquakeInPeriod(int days) {
         String feed = getFeedNameForDays(days);
         String url = BASE_FEED_URL + feed;
@@ -60,8 +60,8 @@ public class EarthquakeClient {
         return strongest.stream().map(this::mapToEarthquakeRecord).toList();
     }
 
-    @Retry(name = "earthquakeApi")
-    @CircuitBreaker(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
+    @CircuitBreaker(name = "earthquakeApi")
+    @Retry(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
     public EarthquakeRecordDTO getMostRecentEarthquake() {
         String[] feeds = {
                 "all_hour.geojson",

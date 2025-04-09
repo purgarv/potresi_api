@@ -26,8 +26,8 @@ public class WeatherClient {
 
     private static final String WEATHER_API = "https://api.openweathermap.org/data/2.5/weather";
 
-    @Retry(name = "weatherApi")
-    @CircuitBreaker(name = "weatherApi", fallbackMethod = "weatherFallback")
+    @CircuitBreaker(name = "weatherApi")
+    @Retry(name = "weatherApi", fallbackMethod = "weatherFallback")
     public WeatherInfoDTO getCurrentWeather(double latitude, double longitude) {
         String uri = UriComponentsBuilder.fromUriString(WEATHER_API)
                 .queryParam("lat", latitude)
