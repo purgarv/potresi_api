@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.web.client.RestTemplate;
+import si.telekom.potresi.config.WeatherApiConfig;
 import si.telekom.potresi.dto.WeatherInfoDTO;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,15 +12,18 @@ import static org.mockito.Mockito.*;
 
 class WeatherClientTest {
 
-    @Mock
     private RestTemplate restTemplate;
-
-    @InjectMocks
     private WeatherClient weatherClient;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        restTemplate = mock(RestTemplate.class);
+
+        WeatherApiConfig config = new WeatherApiConfig();
+        config.setBaseUrl("https://fake-weather-api.com");
+        config.setKey("test-api-key");
+
+        weatherClient = new WeatherClient(restTemplate, config);
     }
 
     // -----------------------------

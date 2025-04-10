@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import si.telekom.potresi.config.EarthquakeApiConfig;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
 import si.telekom.potresi.dto.GeoLocationDTO;
 
@@ -19,18 +20,18 @@ public class EarthquakeClient {
 
     private static final Logger log = LoggerFactory.getLogger(EarthquakeClient.class);
     private final RestTemplate restTemplate;
+    private final EarthquakeApiConfig config;
 
-    public EarthquakeClient(RestTemplate restTemplate) {
+    public EarthquakeClient(RestTemplate restTemplate, EarthquakeApiConfig config) {
         this.restTemplate = restTemplate;
+        this.config = config;
     }
-
-    private static final String BASE_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/";
 
     @CircuitBreaker(name = "earthquakeApi")
     @Retry(name = "earthquakeApi", fallbackMethod = "fallbackWorst")
     public List<EarthquakeRecordDTO> getWorstEarthquakeInPeriod(int days) {
         String feed = getFeedNameForDays(days);
-        String url = BASE_FEED_URL + feed;
+        String url = config.getBaseUrl() + feed;
 
         String response = this.restTemplate.getForObject(url, String.class);
         JSONObject json = new JSONObject(response);
@@ -63,15 +64,10 @@ public class EarthquakeClient {
     @CircuitBreaker(name = "earthquakeApi")
     @Retry(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
     public EarthquakeRecordDTO getMostRecentEarthquake() {
-        String[] feeds = {
-                "all_hour.geojson",
-                "all_day.geojson",
-                "all_week.geojson",
-                "all_month.geojson"
-        };
+        String [] feeds = config.getFeed().keySet().toArray(new String[0]); // get all feed names
 
         for (String feed : feeds) { // if there is no data in the hourly feed, try the next one until data is found
-            String url = BASE_FEED_URL + feed;
+            String url = config.getBaseUrl() + config.getFeed().get(feed);
 
             String response = this.restTemplate.getForObject(url, String.class);
             JSONObject json = new JSONObject(response);
@@ -118,18 +114,18 @@ public class EarthquakeClient {
 
 
     private String getFeedNameForDays(int days) {
-        if (days <= 1) return "all_day.geojson";
-        if (days <= 7) return "all_week.geojson";
-        return "all_month.geojson";
+        if (days <= 1) return config.getFeed().get("daily");
+        if (days <= 7) return config.getFeed().get("weekly");
+        return config.getFeed().get("monthly");
     }
 
     public List<EarthquakeRecordDTO> fallbackWorst(int days, Throwable t) {
-        System.err.println("Fallback for getWorstEarthquakeInPeriod: " + t.getMessage());
+        log.warn("Fallback for getWorstEarthquakeInPeriod triggered", t);
         return List.of();
     }
 
     public EarthquakeRecordDTO fallbackMostRecent(Throwable t) {
-        System.err.println("Fallback for getMostRecentEarthquake: " + t.getMessage());
+        log.warn("Fallback for getMostRecentEarthquake triggered", t);
         return null;
     }
 }

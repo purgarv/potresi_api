@@ -4,24 +4,35 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.web.client.RestTemplate;
+import si.telekom.potresi.config.EarthquakeApiConfig;
 import si.telekom.potresi.dto.EarthquakeRecordDTO;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class EarthquakeClientTest {
 
-    @Mock
     private RestTemplate restTemplate;
-
-    @InjectMocks
     private EarthquakeClient earthquakeClient;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        restTemplate = mock(RestTemplate.class);
+
+        // Inject real config values
+        EarthquakeApiConfig config = new EarthquakeApiConfig();
+        config.setBaseUrl("https://fake.earthquake.api/");
+        config.setFeed(Map.of(
+                "hourly", "all_hour.geojson",
+                "daily", "all_day.geojson",
+                "weekly", "all_week.geojson",
+                "monthly", "all_month.geojson"
+        ));
+
+        earthquakeClient = new EarthquakeClient(restTemplate, config);
     }
 
     // -----------------------------
