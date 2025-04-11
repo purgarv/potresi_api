@@ -1,11 +1,17 @@
 package si.telekom.potresi.dto;
 
 public class WeatherInfoDTO {
+    /** Text description of the current weather (e.g., "clear sky", "light rain"). */
     private String description;
-    private double temperature; // °C
-    private double humidity; // %
-    private boolean weatherAvailable = true;
 
+    /** Temperature in degrees Celsius. */
+    private double temperature;
+
+    /** Relative humidity as a percentage (0–100). */
+    private double humidity;
+
+    /** Indicates whether the weather data was successfully retrieved. */
+    private boolean weatherAvailable = true;
 
     public WeatherInfoDTO() {}
 
@@ -46,6 +52,14 @@ public class WeatherInfoDTO {
         this.humidity = humidity;
     }
 
+    public boolean isWeatherAvailable() {
+        return weatherAvailable;
+    }
+
+    public void setWeatherAvailable(boolean weatherAvailable) {
+        this.weatherAvailable = weatherAvailable;
+    }
+
     @Override
     public String toString() {
         return "WeatherInfo{" +
@@ -53,13 +67,5 @@ public class WeatherInfoDTO {
                 ", temperature=" + temperature +
                 ", humidity=" + humidity +
                 '}';
-    }
-
-    public boolean isWeatherAvailable() {
-        return weatherAvailable;
-    }
-
-    public void setWeatherAvailable(boolean weatherAvailable) {
-        this.weatherAvailable = weatherAvailable;
     }
 }

@@ -27,21 +27,34 @@ public class EarthquakeClient {
         this.config = config;
     }
 
+    /**
+     * Fetches the strongest earthquake(s) in the given period.
+     * Applies circuit breaker and retry mechanisms.
+     *
+     * @param days number of past days to search in
+     * @return list of strongest earthquakes (could be more than one if tied)
+     */
     @CircuitBreaker(name = "earthquakeApi")
     @Retry(name = "earthquakeApi", fallbackMethod = "fallbackWorst")
     public List<EarthquakeRecordDTO> getWorstEarthquakeInPeriod(int days) {
         String feed = getFeedNameForDays(days);
         String url = config.getBaseUrl() + feed;
 
+        log.info("Requesting earthquake data from: {}", url);
         String response = this.restTemplate.getForObject(url, String.class);
+
         JSONObject json = new JSONObject(response);
         JSONArray features = json.getJSONArray("features");
 
-        if (features.length() == 0) return List.of();
+        if (features.length() == 0) {
+            log.info("No earthquake data found in the response.");
+            return List.of();
+        }
 
         double maxMag = Double.MIN_VALUE;
         List<JSONObject> strongest = new ArrayList<>();
 
+        // Iterate through each feature and find the strongest earthquakes
         for (int i = 0; i < features.length(); i++) {
             JSONObject feature = features.getJSONObject(i);
             JSONObject properties = feature.getJSONObject("properties");
@@ -49,6 +62,7 @@ public class EarthquakeClient {
             if (!properties.has("mag") || properties.isNull("mag")) continue;
 
             double mag = properties.getDouble("mag");
+
             if (mag > maxMag) {
                 maxMag = mag;
                 strongest.clear();
@@ -58,23 +72,35 @@ public class EarthquakeClient {
             }
         }
 
+        log.info("Found {} strongest earthquake(s) with magnitude {}", strongest.size(), maxMag);
         return strongest.stream().map(this::mapToEarthquakeRecord).toList();
     }
 
+    /**
+     * Retrieves the most recent earthquake event available in the feeds.
+     * Tries multiple feeds until one with data is found.
+     *
+     * @return most recent EarthquakeRecordDTO or null if none found
+     */
     @CircuitBreaker(name = "earthquakeApi")
     @Retry(name = "earthquakeApi", fallbackMethod = "fallbackMostRecent")
     public EarthquakeRecordDTO getMostRecentEarthquake() {
-        String [] feeds = config.getFeed().keySet().toArray(new String[0]); // get all feed names
+        String[] feeds = config.getFeed().keySet().toArray(new String[0]);
 
-        for (String feed : feeds) { // if there is no data in the hourly feed, try the next one until data is found
+        for (String feed : feeds) {
             String url = config.getBaseUrl() + config.getFeed().get(feed);
+            log.info("Attempting to fetch recent earthquakes from feed: {}", feed);
 
             String response = this.restTemplate.getForObject(url, String.class);
             JSONObject json = new JSONObject(response);
             JSONArray features = json.getJSONArray("features");
 
-            if (features.length() == 0) continue;
+            if (features.length() == 0) {
+                log.debug("No data found in feed: {}", feed);
+                continue;
+            }
 
+            // Find the most recent earthquake by comparing timestamps
             JSONObject mostRecent = features.getJSONObject(0);
             long latestTime = mostRecent.getJSONObject("properties").optLong("time", 0);
 
@@ -89,6 +115,7 @@ public class EarthquakeClient {
 
             EarthquakeRecordDTO record = mapToEarthquakeRecord(mostRecent);
             record.setValidAt(Instant.now());
+            log.info("Most recent earthquake found: {}", record);
             return record;
         }
 
@@ -96,6 +123,9 @@ public class EarthquakeClient {
         return null;
     }
 
+    /**
+     * Maps a JSONObject representing an earthquake to a DTO.
+     */
     private EarthquakeRecordDTO mapToEarthquakeRecord(JSONObject feature) {
         JSONObject properties = feature.getJSONObject("properties");
         JSONObject geometry = feature.getJSONObject("geometry");
@@ -112,18 +142,26 @@ public class EarthquakeClient {
         return record;
     }
 
-
+    /**
+     * Determines which feed to use based on the number of days.
+     */
     private String getFeedNameForDays(int days) {
         if (days <= 1) return config.getFeed().get("daily");
         if (days <= 7) return config.getFeed().get("weekly");
         return config.getFeed().get("monthly");
     }
 
+    /**
+     * Fallback method when getWorstEarthquakeInPeriod fails.
+     */
     public List<EarthquakeRecordDTO> fallbackWorst(int days, Throwable t) {
         log.warn("Fallback for getWorstEarthquakeInPeriod triggered", t);
         return List.of();
     }
 
+    /**
+     * Fallback method when getMostRecentEarthquake fails.
+     */
     public EarthquakeRecordDTO fallbackMostRecent(Throwable t) {
         log.warn("Fallback for getMostRecentEarthquake triggered", t);
         return null;
