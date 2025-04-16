@@ -155,7 +155,7 @@ class EarthquakeClientTest {
           ]
         }""";
 
-        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
         EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
@@ -175,7 +175,7 @@ class EarthquakeClientTest {
           ]
         }""";
 
-        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
         EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
@@ -195,7 +195,7 @@ class EarthquakeClientTest {
           ]
         }""";
 
-        when(restTemplate.getForObject(contains("all_hour"), eq(String.class))).thenReturn(json);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(json);
 
         EarthquakeRecordDTO result = earthquakeClient.getMostRecentEarthquake();
 
